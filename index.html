@@ -559,6 +559,71 @@ function scheduleSave() {
 // ── CORE FUNCTIONS (exposed to window) ──
 function save() { updateStats(); scheduleSave(); }
 
+  // ── FILTER STATE ──
+  let wordsFilterLevel = 'all';
+  let wordsFilterTag   = 'all';
+  let quizTag          = 'all';
+  let quizCount        = 0;
+
+  function getAllTags() {
+    return [...new Set(words.map(w=>w.tag).filter(Boolean))];
+  }
+
+  function refreshTagFilters() {
+    const tags = getAllTags();
+    const wfTags = document.getElementById('wf-tag-chips');
+    if (wfTags) {
+      wfTags.innerHTML = tags.map(t =>
+        `<button class="tag-chip${wordsFilterTag===t?' active':''}" id="wftag-${t}" onclick="setWordsFilterTag('${t}')">#${t}</button>`
+      ).join('');
+    }
+    const qTagEl = document.getElementById('quiz-tag-filter');
+    if (qTagEl) {
+      const allBtn = `<button class="tag-chip${quizTag==='all'?' active':''}" id="qtag-all" onclick="selectQuizTag('all')">All tags</button>`;
+      qTagEl.innerHTML = allBtn + tags.map(t =>
+        `<button class="tag-chip${quizTag===t?' active':''}" id="qtag-${t}" onclick="selectQuizTag('${t}')">#${t}</button>`
+      ).join('');
+    }
+  }
+
+  window.setWordsFilter = level => {
+    wordsFilterLevel = level;
+    document.querySelectorAll('.filter-chip[id^="wf-"]').forEach(b=>b.classList.remove('active'));
+    const btn = document.getElementById('wf-'+level);
+    if (btn) btn.classList.add('active');
+    renderWords();
+  };
+
+  window.setWordsFilterTag = tag => {
+    wordsFilterTag = (wordsFilterTag===tag) ? 'all' : tag;
+    renderWords();
+  };
+
+  window.updateTagSuggestions = () => {
+    const val = document.getElementById('inp-tag').value.toLowerCase();
+    const tags = getAllTags();
+    const el = document.getElementById('tag-suggestions');
+    if (!el) return;
+    const filtered = val ? tags.filter(t=>t.toLowerCase().includes(val)) : tags;
+    el.innerHTML = filtered.map(t =>
+      `<button class="tag-chip" onclick="document.getElementById('inp-tag').value='${t}';document.getElementById('tag-suggestions').innerHTML=''">${t}</button>`
+    ).join('');
+  };
+
+  window.selectQuizTag = tag => {
+    quizTag = tag;
+    document.querySelectorAll('#quiz-tag-filter .tag-chip').forEach(b=>b.classList.remove('active'));
+    const btn = document.getElementById('qtag-'+tag);
+    if (btn) btn.classList.add('active');
+  };
+
+  window.selectQuizCount = n => {
+    quizCount = n;
+    document.querySelectorAll('#quiz-count-btns .tag-chip').forEach(b=>b.classList.remove('active'));
+    const btn = document.getElementById('qcount-'+n);
+    if (btn) btn.classList.add('active');
+  };
+
 function checkStreak() {
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now()-86400000).toDateString();
@@ -881,7 +946,7 @@ function renderToday() {
         ${due.slice(0,5).map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
           <div><span style="font-weight:600">${w.en}</span><span style="color:var(--muted);font-size:0.82rem"> — ${w.ua}</span></div>
           <span class="tag">review</span></div>`).join('')}
-        ${due.length>5?`<div style="color:var(--muted);font-size:0.82rem;margin-top:4px">…and ${due.length-5} more</div>`:''}
+        ${due.length>5?`<button onclick="switchTab('words');setWordsFilter('learning')" style="color:var(--accent);font-size:0.82rem;margin-top:4px;background:none;border:none;cursor:pointer;font-family:var(--font-body);text-decoration:underline;padding:0">…and ${due.length-5} more →</button>`:''}
       </div>`:`<div style="color:var(--muted);font-size:0.85rem;margin-top:8px">Nothing to review today 🎉</div>`}
     </div>
     <div class="add-form" style="margin-bottom:14px">
