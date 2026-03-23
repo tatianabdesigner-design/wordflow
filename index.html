@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordFlow — Тренажер слів</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #ede9d8;
+    --surface:      #F4F1E2;
+    --card:         #fdfcf6;
+    --border:       #d8d2ba;
+    --accent:       #4a7c59;
+    --accent-hover: #3a6447;
+    --accent-light: #d6ead9;
+    --brown:        #513229;
+    --sage:         #D7D4B1;
+    --sky:          #D8EBF9;
+    --warm:         #FCE6B7;
+    --green:        #3d6b47;
+    --red:          #b85c4a;
+    --text:         #2e1f18;
+    --muted:        #907d6a;
+    --font-display: 'Playfair Display', serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; top: -300px; left: -300px;
+    width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(215,212,177,0.5) 0%, transparent 65%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed; bottom: -250px; right: -250px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(252,230,183,0.45) 0%, transparent 65%);
+    pointer-events: none; z-index: 0;
+  }
+  #app {
+    position: relative; z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 36px 20px 80px;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 40px;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 1.85rem; color: var(--brown); letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .stats-bar {
+    display: flex; gap: 18px;
+    font-size: 0.78rem; color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .stats-bar b { color: var(--text); font-weight: 600; }
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 5px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 6px rgba(81,50,41,0.07);
+  }
+  .tab {
+    flex: 1; padding: 10px 0;
+    border: none; background: none;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem; font-weight: 500;
+    border-radius: 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); background: rgba(74,124,89,0.08); }
+  .tab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(74,124,89,0.28); }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem; color: var(--brown);
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .dot {
+    width: 8px; height: 8px;
+    background: var(--accent); border-radius: 50%; flex-shrink: 0;
+  }
+  .add-form {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 18px; padding: 24px; margin-bottom: 22px;
+    box-shadow: 0 2px 10px rgba(81,50,41,0.06);
+  }
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 12px;
+  }
+  label {
+    display: block; font-size: 0.7rem; color: var(--muted);
+    margin-bottom: 5px; text-transform: uppercase;
+    letter-spacing: 0.09em; font-weight: 600;
+  }
+  input, textarea, select {
+    width: 100%; background: var(--surface);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    color: var(--text); font-family: var(--font-body);
+    font-size: 0.9rem; padding: 10px 13px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s; resize: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(74,124,89,0.13);
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 22px; border: none; border-radius: 10px;
+    font-family: var(--font-body); font-size: 0.87rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 2px 8px rgba(74,124,89,0.25);
+  }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(74,124,89,0.3); }
+  .btn-ghost {
+    background: var(--surface); border: 1.5px solid var(--border); color: var(--muted);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); background: var(--accent-light); }
+  .words-list { display: flex; flex-direction: column; gap: 10px; }
+  .word-card {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 16px 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: all 0.2s; animation: slideIn 0.25s ease;
+    box-shadow: 0 1px 5px rgba(81,50,41,0.05);
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .word-card:hover { border-color: rgba(74,124,89,0.5); box-shadow: 0 4px 14px rgba(74,124,89,0.1); }
+  .word-main { flex: 1; }
+  .word-en { font-size: 1rem; font-weight: 600; color: var(--text); }
+  .word-ua { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .word-example {
+    font-size: 0.77rem; color: var(--muted); font-style: italic;
+    margin-top: 4px; border-left: 2.5px solid var(--accent); padding-left: 8px;
+  }
+  .word-meta { text-align: right; font-family: var(--font-mono); font-size: 0.72rem; }
+  .level-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.68rem; font-weight: 700; margin-bottom: 4px;
+  }
+  .level-new      { background: var(--warm);         color: #9a6a1a; }
+  .level-learning { background: var(--sky);           color: #3a6a9a; }
+  .level-known    { background: var(--accent-light);  color: var(--green); }
+  .next-review { color: var(--muted); font-size: 0.68rem; }
+  .word-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 32px; height: 32px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: var(--surface); color: var(--muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--red); border-color: var(--red); background: #faeeed; }
+  .quiz-wrap { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .quiz-progress { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width 0.4s ease; }
+  .progress-text { font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
+  .quiz-card {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 22px; padding: 44px 36px; text-align: center;
+    margin-bottom: 18px; min-height: 230px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 3px 16px rgba(81,50,41,0.07);
+  }
+  .quiz-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(214,234,217,0.4) 0%, transparent 60%);
+  }
+  .quiz-mode-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+  .quiz-question { font-family: var(--font-display); font-size: 2.2rem; color: var(--brown); line-height: 1.2; }
+  .quiz-hint { font-size: 0.82rem; color: var(--muted); font-style: italic; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .choice-btn {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-family: var(--font-body); font-size: 0.9rem;
+    padding: 14px 16px; cursor: pointer; transition: all 0.18s; text-align: left;
+    box-shadow: 0 1px 4px rgba(81,50,41,0.05);
+  }
+  .choice-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-light); }
+  .choice-btn.correct { border-color: var(--green); background: var(--accent-light); color: var(--green); font-weight: 600; }
+  .choice-btn.wrong   { border-color: var(--red); background: #faeeed; color: var(--red); }
+  .choice-btn:disabled { cursor: default; }
+  .flip-card { perspective: 1000px; width: 100%; cursor: pointer; }
+  .flip-inner { position: relative; width: 100%; transition: transform 0.5s; transform-style: preserve-3d; }
+  .flip-inner.flipped { transform: rotateY(180deg); }
+  .flip-front, .flip-back {
+    backface-visibility: hidden;
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 22px; padding: 50px 36px; text-align: center;
+    min-height: 200px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 3px 16px rgba(81,50,41,0.07);
+  }
+  .flip-back {
+    position: absolute; top: 0; left: 0; width: 100%;
+    transform: rotateY(180deg);
+    background: var(--accent-light); border-color: var(--accent);
+  }
+  .flip-back .quiz-question { color: var(--green); }
+  .flip-tap { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+  .flashcard-actions { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+  .btn-know {
+    background: var(--accent-light); border: 1.5px solid var(--accent); color: var(--green);
+    padding: 11px 28px; border-radius: 10px;
+    font-family: var(--font-body); font-size: 0.87rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
+  }
+  .btn-know:hover { background: #c2ddc8; }
+  .btn-nope {
+    background: #faeeed; border: 1.5px solid var(--red); color: var(--red);
+    padding: 11px 28px; border-radius: 10px;
+    font-family: var(--font-body); font-size: 0.87rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
+  }
+  .btn-nope:hover { background: #f5d8d5; }
+  .type-wrap { display: flex; gap: 10px; margin-bottom: 16px; }
+  .type-wrap input { flex: 1; font-size: 1rem; text-align: center; }
+  .type-wrap input.correct-input { border-color: var(--green); color: var(--green); background: var(--accent-light); }
+  .type-wrap input.wrong-input   { border-color: var(--red);   color: var(--red);   background: #faeeed; }
+  .answer-reveal {
+    text-align: center; padding: 10px; border-radius: 10px;
+    background: #faeeed; color: var(--red); font-size: 0.85rem; margin-bottom: 14px;
+  }
+  .answer-reveal span { color: var(--green); font-weight: 700; }
+  .result-screen {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 22px; padding: 48px 36px; text-align: center;
+    animation: fadeIn 0.4s ease; box-shadow: 0 3px 16px rgba(81,50,41,0.07);
+  }
+  .result-emoji { font-size: 3rem; margin-bottom: 12px; }
+  .result-title { font-family: var(--font-display); font-size: 1.8rem; color: var(--brown); margin-bottom: 8px; }
+  .result-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+  .result-stats { display: flex; justify-content: center; gap: 36px; margin-bottom: 28px; }
+  .result-stat { text-align: center; }
+  .result-stat .num { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; }
+  .result-stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .num-green { color: var(--green); } .num-red { color: var(--red); } .num-acc { color: var(--accent); }
+  .quiz-setup {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 18px; padding: 26px; margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(81,50,41,0.06);
+  }
+  .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .quiz-opt-btn {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px; cursor: pointer;
+    text-align: center; transition: all 0.18s;
+    color: var(--muted); font-family: var(--font-body); font-size: 0.85rem;
+  }
+  .quiz-opt-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(74,124,89,0.06); }
+  .quiz-opt-btn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--green); font-weight: 600; }
+  .quiz-opt-icon { font-size: 1.4rem; display: block; margin-bottom: 5px; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 12px 18px; font-size: 0.85rem;
+    z-index: 1000; animation: toastIn 0.3s ease;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 18px rgba(81,50,41,0.14); color: var(--text);
+  }
+  @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .tag {
+    display: inline-block; padding: 2px 9px;
+    background: var(--sage); border-radius: 20px;
+    font-size: 0.68rem; color: var(--brown); font-weight: 600;
+  }
+  @media (max-width:520px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .choices { grid-template-columns: 1fr; }
+    .quiz-question { font-size: 1.6rem; }
+    header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .stats-bar { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Word<span>Flow</span></div>
+    <div class="stats-bar">
+      <div>📚 <b id="stat-total">0</b> слів</div>
+      <div>✅ <b id="stat-known">0</b> вивчено</div>
+      <div>🔥 <b id="stat-streak">0</b> дн.</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('words')">📝 Слова</button>
+    <button class="tab" onclick="switchTab('quiz')">🎯 Практика</button>
+    <button class="tab" onclick="switchTab('today')">📅 На сьогодні</button>
+  </div>
+
+  <div id="tab-words">
+    <div class="add-form">
+      <div class="section-title"><span class="dot"></span> Додати нове слово</div>
+      <div class="form-grid">
+        <div><label>Слово (англ.)</label><input id="inp-en" type="text" placeholder="e.g. persistent"></div>
+        <div><label>Переклад (укр.)</label><input id="inp-ua" type="text" placeholder="e.g. наполегливий"></div>
+      </div>
+      <div class="form-grid">
+        <div><label>Приклад речення</label><input id="inp-ex" type="text" placeholder="She was persistent in her efforts."></div>
+        <div><label>Тема / тег</label><input id="inp-tag" type="text" placeholder="work, emotions..."></div>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="addWord()">＋ Додати слово</button>
+        <button class="btn btn-ghost" onclick="loadDemo()">🌿 Демо-слова</button>
+      </div>
+    </div>
+    <div id="words-list" class="words-list">
+      <div class="empty-state"><div class="icon">🌿</div><p>Ще немає слів. Додай перше або завантаж демо!</p></div>
+    </div>
+  </div>
+
+  <div id="tab-quiz" style="display:none">
+    <div id="quiz-setup-screen">
+      <div class="quiz-setup">
+        <div class="section-title"><span class="dot"></span> Режим практики</div>
+        <div class="quiz-options">
+          <button class="quiz-opt-btn selected" id="mode-flashcard" onclick="selectMode('flashcard')"><span class="quiz-opt-icon">🃏</span>Картки (флеш)</button>
+          <button class="quiz-opt-btn" id="mode-choice" onclick="selectMode('choice')"><span class="quiz-opt-icon">🔠</span>Вибір відповіді</button>
+          <button class="quiz-opt-btn" id="mode-type" onclick="selectMode('type')"><span class="quiz-opt-icon">⌨️</span>Вводити текст</button>
+          <button class="quiz-opt-btn" id="mode-reverse" onclick="selectMode('reverse')"><span class="quiz-opt-icon">🔄</span>Укр → Англ</button>
+        </div>
+      </div>
+      <div class="quiz-setup">
+        <label>Фільтр слів</label>
+        <select id="quiz-filter" style="margin-top:8px">
+          <option value="all">Всі слова</option>
+          <option value="new">Тільки нові</option>
+          <option value="learning">Вчу (повторення)</option>
+          <option value="due">Час повторити</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:15px;font-size:0.95rem" onclick="startQuiz()">🚀 Почати практику</button>
+    </div>
+    <div id="quiz-screen" style="display:none" class="quiz-wrap">
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" id="qprogress"></div></div>
+        <div class="progress-text" id="qprogress-text">0 / 0</div>
+      </div>
+      <div id="quiz-content"></div>
+    </div>
+    <div id="quiz-result" style="display:none"></div>
+  </div>
+
+  <div id="tab-today" style="display:none">
+    <div class="section-title"><span class="dot"></span> Програма на сьогодні</div>
+    <div id="today-content"></div>
+  </div>
+</div>
+
+<script>
+let words = JSON.parse(localStorage.getItem('wf_words') || '[]');
+let streak = parseInt(localStorage.getItem('wf_streak') || '0');
+let lastStudy = localStorage.getItem('wf_last') || '';
+
+const DEMO_WORDS = [
+  {en:'persistent', ua:'наполегливий',       ex:'She was persistent in her efforts.',    tag:'personality'},
+  {en:'hesitant',   ua:'вагаючийся',          ex:'He was hesitant to speak first.',       tag:'emotions'},
+  {en:'fluent',     ua:'вільно володіти',     ex:'She is fluent in three languages.',     tag:'language'},
+  {en:'acquire',    ua:'набути / отримати',   ex:'You acquire skills through practice.',  tag:'learning'},
+  {en:'deadline',   ua:'дедлайн',             ex:'We need to meet the deadline.',         tag:'work'},
+  {en:'negotiate',  ua:'домовлятися',         ex:'They negotiated a better deal.',        tag:'work'},
+  {en:'exhausted',  ua:'виснажений',          ex:'I was exhausted after the exam.',       tag:'emotions'},
+  {en:'accomplish', ua:'досягати / виконати', ex:'She accomplished her goal.',            tag:'learning'},
+];
+
+function save() {
+  localStorage.setItem('wf_words', JSON.stringify(words));
+  localStorage.setItem('wf_streak', streak);
+  localStorage.setItem('wf_last', lastStudy);
+  updateStats();
+}
+function checkStreak() {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now()-86400000).toDateString();
+  if (lastStudy === today) return;
+  streak = (lastStudy === yesterday) ? streak+1 : 1;
+  lastStudy = today; save();
+}
+function updateStats() {
+  document.getElementById('stat-total').textContent  = words.length;
+  document.getElementById('stat-known').textContent  = words.filter(w=>w.level==='known').length;
+  document.getElementById('stat-streak').textContent = streak;
+}
+function addWord() {
+  const en=document.getElementById('inp-en').value.trim();
+  const ua=document.getElementById('inp-ua').value.trim();
+  const ex=document.getElementById('inp-ex').value.trim();
+  const tag=document.getElementById('inp-tag').value.trim();
+  if (!en||!ua){showToast('⚠️ Введи слово і переклад');return;}
+  words.unshift({id:Date.now(),en,ua,ex,tag,level:'new',reviews:0,correct:0,nextReview:Date.now(),addedAt:Date.now()});
+  save(); renderWords();
+  ['inp-en','inp-ua','inp-ex','inp-tag'].forEach(id=>document.getElementById(id).value='');
+  showToast('✅ Слово додано!');
+}
+function loadDemo() {
+  DEMO_WORDS.forEach(d=>{
+    if (!words.find(w=>w.en===d.en))
+      words.push({id:Date.now()+Math.random(),...d,level:'new',reviews:0,correct:0,nextReview:Date.now(),addedAt:Date.now()});
+  });
+  save(); renderWords(); showToast('🌿 8 демо-слів додано!');
+}
+function deleteWord(id){words=words.filter(w=>w.id!==id);save();renderWords();}
+function renderWords() {
+  const el=document.getElementById('words-list');
+  if (!words.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🌿</div><p>Ще немає слів. Додай перше або завантаж демо!</p></div>`;return;
+  }
+  el.innerHTML=words.map(w=>{
+    const cls=w.level==='known'?'level-known':w.level==='learning'?'level-learning':'level-new';
+    const lbl=w.level==='known'?'✅ Знаю':w.level==='learning'?'📘 Вчу':'🆕 Нове';
+    const acc=w.reviews?Math.round(w.correct/w.reviews*100):0;
+    const due=w.nextReview<=Date.now();
+    return `<div class="word-card">
+      <div class="word-main">
+        <div class="word-en">${w.en}${w.tag?` <span class="tag">${w.tag}</span>`:''}</div>
+        <div class="word-ua">${w.ua}</div>
+        ${w.ex?`<div class="word-example">${w.ex}</div>`:''}
+      </div>
+      <div class="word-meta">
+        <div class="level-badge ${cls}">${lbl}</div>
+        ${w.reviews?`<div class="next-review">${acc}% точність</div>`:''}
+        ${due&&w.level!=='new'?`<div style="color:#9a6a1a;font-size:0.68rem">⏰ повтори</div>`:''}
+      </div>
+      <div class="word-actions">
+        <button class="icon-btn" onclick="deleteWord(${w.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function switchTab(tab) {
+  ['words','quiz','today'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+  document.querySelectorAll('.tab').forEach((btn,i)=>btn.classList.toggle('active',['words','quiz','today'][i]===tab));
+  if (tab==='today') renderToday();
+}
+let quizMode='flashcard', quizWords=[], quizIdx=0, quizScore={correct:0,wrong:0}, cardFlipped=false;
+function selectMode(m) {
+  quizMode=m;
+  document.querySelectorAll('.quiz-opt-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('mode-'+m).classList.add('selected');
+}
+function startQuiz() {
+  const filter=document.getElementById('quiz-filter').value;
+  const now=Date.now();
+  let pool=[...words];
+  if (filter==='new') pool=pool.filter(w=>w.level==='new');
+  else if (filter==='learning') pool=pool.filter(w=>w.level==='learning');
+  else if (filter==='due') pool=pool.filter(w=>w.nextReview<=now);
+  quizWords=pool.sort(()=>Math.random()-0.5);
+  if (!quizWords.length){showToast('😅 Немає слів для практики');return;}
+  quizIdx=0; quizScore={correct:0,wrong:0};
+  document.getElementById('quiz-setup-screen').style.display='none';
+  document.getElementById('quiz-result').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  checkStreak(); renderQuizCard();
+}
+function renderQuizCard() {
+  if (quizIdx>=quizWords.length){showResult();return;}
+  const w=quizWords[quizIdx];
+  const pct=Math.round(quizIdx/quizWords.length*100);
+  document.getElementById('qprogress').style.width=pct+'%';
+  document.getElementById('qprogress-text').textContent=`${quizIdx} / ${quizWords.length}`;
+  const content=document.getElementById('quiz-content');
+  cardFlipped=false;
+  if (quizMode==='flashcard') {
+    content.innerHTML=`
+      <div class="flip-card" onclick="flipCard()">
+        <div class="flip-inner" id="flip-inner">
+          <div class="flip-front">
+            <div class="quiz-mode-label">Що означає це слово?</div>
+            <div class="quiz-question">${w.en}</div>
+            ${w.tag?`<span class="tag">${w.tag}</span>`:''}
+            <div class="flip-tap">Натисни, щоб побачити відповідь 👆</div>
+          </div>
+          <div class="flip-back">
+            <div class="quiz-mode-label">Переклад</div>
+            <div class="quiz-question">${w.ua}</div>
+            ${w.ex?`<div class="quiz-hint">"${w.ex}"</div>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="flashcard-actions" id="fc-actions" style="display:none">
+        <button class="btn-nope" onclick="answerCard(false)">😕 Не знав</button>
+        <button class="btn-know" onclick="answerCard(true)">✅ Знав!</button>
+      </div>`;
+  } else if (quizMode==='choice'||quizMode==='reverse') {
+    const isRev=quizMode==='reverse';
+    const question=isRev?w.ua:w.en;
+    const correct=isRev?w.en:w.ua;
+    const others=words.filter(x=>x.id!==w.id).sort(()=>Math.random()-0.5).slice(0,3);
+    const choices=[...others.map(x=>isRev?x.en:x.ua),correct].sort(()=>Math.random()-0.5);
+    content.innerHTML=`
+      <div class="quiz-card">
+        <div class="quiz-mode-label">${isRev?'Перекладіть на англійську':'Що означає?'}</div>
+        <div class="quiz-question">${question}</div>
+        ${w.tag?`<span class="tag">${w.tag}</span>`:''}
+      </div>
+      <div class="choices">
+        ${choices.map(c=>`<button class="choice-btn" onclick="checkChoice(this,'${c.replace(/'/g,"\\'")}','${correct.replace(/'/g,"\\'")}')">${c}</button>`).join('')}
+      </div>`;
+  } else if (quizMode==='type') {
+    content.innerHTML=`
+      <div class="quiz-card">
+        <div class="quiz-mode-label">Напиши переклад</div>
+        <div class="quiz-question">${w.en}</div>
+        ${w.ex?`<div class="quiz-hint">"${w.ex}"</div>`:''}
+      </div>
+      <div class="type-wrap">
+        <input id="type-input" type="text" placeholder="Введи переклад українською..." onkeydown="if(event.key==='Enter')checkType()">
+        <button class="btn btn-primary" onclick="checkType()">→</button>
+      </div>
+      <div id="type-feedback"></div>`;
+    setTimeout(()=>document.getElementById('type-input').focus(),100);
+  }
+}
+function flipCard() {
+  document.getElementById('flip-inner').classList.toggle('flipped');
+  cardFlipped=!cardFlipped;
+  if (cardFlipped) document.getElementById('fc-actions').style.display='flex';
+}
+function answerCard(knew) {
+  updateWord(quizWords[quizIdx],knew);
+  if(knew)quizScore.correct++;else quizScore.wrong++;
+  quizIdx++;renderQuizCard();
+}
+function checkChoice(btn,chosen,correct) {
+  document.querySelectorAll('.choice-btn').forEach(b=>b.disabled=true);
+  const ok=chosen===correct;
+  btn.classList.add(ok?'correct':'wrong');
+  if (!ok) document.querySelectorAll('.choice-btn').forEach(b=>{if(b.textContent.trim()===correct)b.classList.add('correct');});
+  updateWord(quizWords[quizIdx],ok);
+  if(ok)quizScore.correct++;else quizScore.wrong++;
+  setTimeout(()=>{quizIdx++;renderQuizCard();},900);
+}
+function checkType() {
+  const input=document.getElementById('type-input');
+  const val=input.value.trim().toLowerCase();
+  const ans=quizWords[quizIdx].ua.toLowerCase();
+  const ok=val===ans||ans.includes(val)||val.includes(ans.split('/')[0].trim());
+  input.disabled=true;
+  input.classList.add(ok?'correct-input':'wrong-input');
+  const fb=document.getElementById('type-feedback');
+  updateWord(quizWords[quizIdx],ok);
+  if (ok) {
+    quizScore.correct++;
+    fb.innerHTML=`<div style="text-align:center;color:var(--green);padding:8px;font-weight:600">🎉 Правильно!</div>`;
+    setTimeout(()=>{quizIdx++;renderQuizCard();},800);
+  } else {
+    quizScore.wrong++;
+    fb.innerHTML=`<div class="answer-reveal">Правильно: <span>${quizWords[quizIdx].ua}</span></div>`;
+    setTimeout(()=>{quizIdx++;renderQuizCard();},1500);
+  }
+}
+function updateWord(w,correct) {
+  const idx=words.findIndex(x=>x.id===w.id);if(idx<0)return;
+  words[idx].reviews++;
+  if(correct)words[idx].correct++;
+  const acc=words[idx].correct/words[idx].reviews;
+  words[idx].level=(words[idx].reviews>=3&&acc>=0.8)?'known':'learning';
+  const intervals=[1,3,7,14,30];
+  const lvl=Math.min(words[idx].reviews-1,intervals.length-1);
+  words[idx].nextReview=Date.now()+(correct?intervals[lvl]:intervals[0])*86400000;
+  save();
+}
+function showResult() {
+  document.getElementById('quiz-screen').style.display='none';
+  const total=quizScore.correct+quizScore.wrong;
+  const pct=total?Math.round(quizScore.correct/total*100):0;
+  const emoji=pct>=80?'🏆':pct>=50?'💪':'📚';
+  const msg=pct>=80?'Чудово!':pct>=50?'Непогано!':'Треба ще попрактикуватись!';
+  const modeLabel={flashcard:'Картки',choice:'Вибір',type:'Введення',reverse:'Укр→Англ'}[quizMode];
+  document.getElementById('quiz-result').style.display='block';
+  document.getElementById('quiz-result').innerHTML=`
+    <div class="result-screen">
+      <div class="result-emoji">${emoji}</div>
+      <div class="result-title">${msg}</div>
+      <div class="result-sub">Сесія завершена · ${modeLabel}</div>
+      <div class="result-stats">
+        <div class="result-stat"><div class="num num-green">${quizScore.correct}</div><div class="lbl">Правильно</div></div>
+        <div class="result-stat"><div class="num num-red">${quizScore.wrong}</div><div class="lbl">Помилки</div></div>
+        <div class="result-stat"><div class="num num-acc">${pct}%</div><div class="lbl">Точність</div></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="startQuiz()">🔁 Ще раз</button>
+        <button class="btn btn-ghost" onclick="backToSetup()">⚙️ Налаштування</button>
+      </div>
+    </div>`;
+}
+function backToSetup() {
+  document.getElementById('quiz-result').style.display='none';
+  document.getElementById('quiz-setup-screen').style.display='block';
+}
+function renderToday() {
+  const el=document.getElementById('today-content');
+  const now=Date.now();
+  const due=words.filter(w=>w.nextReview<=now&&w.level!=='known');
+  const newW=words.filter(w=>w.level==='new').slice(0,5);
+  const known=words.filter(w=>w.level==='known');
+  const progress=words.length?Math.round(known.length/words.length*100):0;
+  el.innerHTML=`
+    <div class="add-form" style="margin-bottom:14px">
+      <b style="color:#9a6a1a">⏰ Час повторити: ${due.length} слів</b>
+      ${due.length?`<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        ${due.slice(0,5).map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+          <div><span style="font-weight:600">${w.en}</span><span style="color:var(--muted);font-size:0.82rem"> — ${w.ua}</span></div>
+          <span class="tag">повтори</span></div>`).join('')}
+        ${due.length>5?`<div style="color:var(--muted);font-size:0.82rem;margin-top:4px">…і ще ${due.length-5} слів</div>`:''}
+      </div>`:`<div style="color:var(--muted);font-size:0.85rem;margin-top:8px">Нічого не треба повторювати 🎉</div>`}
+    </div>
+    <div class="add-form" style="margin-bottom:14px">
+      <b style="color:var(--accent)">🆕 Нові слова: ${newW.length}</b>
+      ${newW.length?`<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px">
+        ${newW.map(w=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:0.82rem"><b>${w.en}</b> — ${w.ua}</div>`).join('')}
+      </div>`:`<div style="color:var(--muted);font-size:0.85rem;margin-top:8px">Додай нові слова після заняття!</div>`}
+    </div>
+    <div class="add-form">
+      <b style="color:var(--green)">✅ Прогрес: ${known.length} з ${words.length} слів</b>
+      <div style="margin-top:12px;background:var(--border);border-radius:8px;overflow:hidden;height:8px">
+        <div style="height:100%;width:${progress}%;background:var(--accent);border-radius:8px;transition:width 0.6s"></div>
+      </div>
+      <div style="color:var(--muted);font-size:0.78rem;margin-top:6px">${progress}% завершено</div>
+    </div>`;
+}
+function showToast(msg) {
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+renderWords(); updateStats();
+</script>
+</body>
+</html>
