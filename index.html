@@ -160,6 +160,27 @@
   .modal-field { margin-bottom: 14px; }
   .modal-actions { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
 
+  /* FLASHCARD HINTS */
+  .hint-buttons { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+  .hint-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--muted);
+    font-family: var(--font-body); transition: all 0.18s;
+  }
+  .hint-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .hint-btn.revealed { border-color: var(--accent); background: var(--accent-light); color: var(--green); }
+  .hint-reveal {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 10px 16px;
+    font-size: 0.85rem; color: var(--text);
+    margin-bottom: 8px; animation: slideIn 0.2s ease;
+    position: relative; z-index: 1; text-align: center;
+  }
+  .hint-reveal .blank { display: inline-block; min-width: 60px; border-bottom: 2px solid var(--accent); margin: 0 3px; }
+  .fc-definition { font-size: 1rem; color: var(--muted); font-style: italic; line-height: 1.5; max-width: 400px; text-align: center; position: relative; z-index: 1; }
+
   .quiz-wrap { animation: fadeIn 0.3s ease; }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   .quiz-progress { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
@@ -315,6 +336,10 @@
         <div><label>Example sentence</label><input id="inp-ex" type="text" placeholder="She was persistent in her efforts."></div>
         <div><label>Topic / tag</label><input id="inp-tag" type="text" placeholder="work, emotions..."></div>
       </div>
+      <div style="margin-bottom:12px">
+        <label>Definition (English)</label>
+        <input id="inp-def" type="text" placeholder="e.g. continuing firmly despite difficulty or opposition">
+      </div>
       <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="addWord()">＋ Add word</button>
         <button class="btn btn-ghost" onclick="loadDemo()">🌿 Demo words</button>
@@ -372,6 +397,7 @@
     <div class="modal-field"><label>Word (English)</label><input id="edit-en" type="text"></div>
     <div class="modal-field"><label>Translation (UA)</label><input id="edit-ua" type="text"></div>
     <div class="modal-field"><label>Example sentence</label><input id="edit-ex" type="text" placeholder="Add an example sentence..."></div>
+    <div class="modal-field"><label>Definition (English)</label><input id="edit-def" type="text" placeholder="e.g. continuing firmly despite difficulty..."></div>
     <div class="modal-field"><label>Topic / tag</label><input id="edit-tag" type="text" placeholder="work, emotions..."></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
@@ -509,14 +535,14 @@ function updateStats() {
 }
 
 const DEMO_WORDS = [
-  {en:'persistent', ua:'наполегливий',       ex:'She was persistent in her efforts.',    tag:'personality'},
-  {en:'hesitant',   ua:'вагаючийся',          ex:'He was hesitant to speak first.',       tag:'emotions'},
-  {en:'fluent',     ua:'вільно володіти',     ex:'She is fluent in three languages.',     tag:'language'},
-  {en:'acquire',    ua:'набути / отримати',   ex:'You acquire skills through practice.',  tag:'learning'},
-  {en:'deadline',   ua:'дедлайн',             ex:'We need to meet the deadline.',         tag:'work'},
-  {en:'negotiate',  ua:'домовлятися',         ex:'They negotiated a better deal.',        tag:'work'},
-  {en:'exhausted',  ua:'виснажений',          ex:'I was exhausted after the exam.',       tag:'emotions'},
-  {en:'accomplish', ua:'досягати / виконати', ex:'She accomplished her goal.',            tag:'learning'},
+  {en:'persistent', ua:'наполегливий',       def:'continuing firmly despite difficulty or opposition',       ex:'She was persistent in her efforts.',    tag:'personality'},
+  {en:'hesitant',   ua:'вагаючийся',          def:'slow to act or speak due to uncertainty or unwillingness', ex:'He was hesitant to speak first.',       tag:'emotions'},
+  {en:'fluent',     ua:'вільно володіти',     def:'able to speak or write a language easily and accurately',  ex:'She is fluent in three languages.',     tag:'language'},
+  {en:'acquire',    ua:'набути / отримати',   def:'to get or obtain something, especially over time',         ex:'You acquire skills through practice.',  tag:'learning'},
+  {en:'deadline',   ua:'дедлайн',             def:'the latest time by which something must be completed',     ex:'We need to meet the deadline.',         tag:'work'},
+  {en:'negotiate',  ua:'домовлятися',         def:'to discuss something to reach an agreement',               ex:'They negotiated a better deal.',        tag:'work'},
+  {en:'exhausted',  ua:'виснажений',          def:'extremely tired, having used up all energy',               ex:'I was exhausted after the exam.',       tag:'emotions'},
+  {en:'accomplish', ua:'досягати / виконати', def:'to succeed in doing or completing something',              ex:'She accomplished her goal.',            tag:'learning'},
 ];
 
 window.addWord = () => {
@@ -525,9 +551,10 @@ window.addWord = () => {
   const ex=document.getElementById('inp-ex').value.trim();
   const tag=document.getElementById('inp-tag').value.trim();
   if (!en||!ua){showToast('⚠️ Enter word and translation');return;}
-  words.unshift({id:Date.now(),en,ua,ex,tag,level:'new',reviews:0,correct:0,nextReview:Date.now(),addedAt:Date.now()});
+  const def=document.getElementById('inp-def').value.trim();
+  words.unshift({id:Date.now(),en,ua,ex,def,tag,level:'new',reviews:0,correct:0,nextReview:Date.now(),addedAt:Date.now()});
   save(); renderWords();
-  ['inp-en','inp-ua','inp-ex','inp-tag'].forEach(id=>document.getElementById(id).value='');
+  ['inp-en','inp-ua','inp-ex','inp-def','inp-tag'].forEach(id=>document.getElementById(id).value='');
   showToast('✅ Word added!');
 };
 
@@ -557,6 +584,7 @@ function renderWords() {
       <div class="word-main">
         <div class="word-en">${w.en}${w.tag?` <span class="tag">${w.tag}</span>`:''}</div>
         <div class="word-ua">${w.ua}</div>
+        ${w.def?`<div class="word-example" style="border-left-color:var(--brown);opacity:0.8">📖 ${w.def}</div>`:''}
         ${w.ex?`<div class="word-example">${w.ex}</div>`:''}
       </div>
       <div class="word-meta">
@@ -613,19 +641,36 @@ function renderQuizCard() {
   cardFlipped=false;
 
   if (quizMode==='flashcard') {
+    // Build hint buttons only if data exists
+    const hasEx  = w.ex && w.ex.trim();
+    const hasUa  = w.ua && w.ua.trim();
+    const blanked = hasEx ? w.ex.replace(new RegExp(w.en, 'gi'), '<span class="blank"></span>') : '';
+    const hintBtns = (hasEx || hasUa) ? `
+      <div class="hint-buttons">
+        ${hasEx ? `<button class="hint-btn" id="hint-sentence" onclick="toggleHint('sentence')">📝 Show sentence</button>` : ''}
+        ${hasUa ? `<button class="hint-btn" id="hint-translation" onclick="toggleHint('translation')">🇺🇦 Show translation</button>` : ''}
+      </div>
+      <div id="hint-sentence-reveal" style="display:none" class="hint-reveal">📝 ${blanked}</div>
+      <div id="hint-translation-reveal" style="display:none" class="hint-reveal">🇺🇦 ${w.ua}</div>` : '';
+    // Front content: definition or UA if no definition
+    const frontMain = w.def
+      ? `<div class="fc-definition">${w.def}</div>`
+      : `<div class="quiz-question" style="font-size:1.6rem">${w.ua}</div>`;
     content.innerHTML=`
-      <div class="flip-card" onclick="flipCard()">
-        <div class="flip-inner" id="flip-inner">
-          <div class="flip-front">
-            <div class="quiz-mode-label">What does this word mean?</div>
-            <div class="quiz-question">${w.en}</div>
-            ${w.tag?`<span class="tag">${w.tag}</span>`:''}
-            <div class="flip-tap">Tap to reveal answer 👆</div>
-          </div>
-          <div class="flip-back">
-            <div class="quiz-mode-label">Translation</div>
-            <div class="quiz-question">${w.ua}</div>
-            ${w.ex?`<div class="quiz-hint">"${w.ex}"</div>`:''}
+      ${hintBtns}
+      <div class="quiz-card" style="cursor:pointer;min-height:180px" onclick="flipCard()">
+        <div class="flip-card" style="width:100%">
+          <div class="flip-inner" id="flip-inner">
+            <div class="flip-front" style="min-height:160px">
+              <div class="quiz-mode-label">Guess the word</div>
+              ${frontMain}
+              ${w.tag ? `<span class="tag">${w.tag}</span>` : ''}
+              <div class="flip-tap">Tap to reveal the word 👆</div>
+            </div>
+            <div class="flip-back" style="min-height:160px">
+              <div class="quiz-mode-label">The word is</div>
+              <div class="quiz-question">${w.en}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -717,6 +762,15 @@ function updateWord(w,correct) {
   save();
 }
 
+window.toggleHint = type => {
+  const btn = document.getElementById('hint-' + type);
+  const reveal = document.getElementById('hint-' + type + '-reveal');
+  if (!btn || !reveal) return;
+  const isOpen = reveal.style.display !== 'none';
+  reveal.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('revealed', !isOpen);
+};
+
 function showResult() {
   document.getElementById('quiz-screen').style.display='none';
   const total=quizScore.correct+quizScore.wrong;
@@ -788,6 +842,7 @@ window.openEdit = id => {
   document.getElementById('edit-en').value  = w.en  || '';
   document.getElementById('edit-ua').value  = w.ua  || '';
   document.getElementById('edit-ex').value  = w.ex  || '';
+  document.getElementById('edit-def').value = w.def || '';
   document.getElementById('edit-tag').value = w.tag || '';
   document.getElementById('edit-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('edit-en').focus(), 50);
@@ -806,11 +861,12 @@ window.saveEdit = () => {
   const en  = document.getElementById('edit-en').value.trim();
   const ua  = document.getElementById('edit-ua').value.trim();
   const ex  = document.getElementById('edit-ex').value.trim();
+  const def = document.getElementById('edit-def').value.trim();
   const tag = document.getElementById('edit-tag').value.trim();
   if (!en || !ua) { showToast('⚠️ Word and translation are required'); return; }
   const idx = words.findIndex(x => x.id === editingId);
   if (idx < 0) return;
-  words[idx] = { ...words[idx], en, ua, ex, tag };
+  words[idx] = { ...words[idx], en, ua, ex, def, tag };
   save(); renderWords(); closeEdit();
   showToast('✅ Word updated!');
 };
