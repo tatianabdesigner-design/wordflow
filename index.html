@@ -248,6 +248,18 @@
 
   .tag { display: inline-block; padding: 2px 9px; background: var(--sage); border-radius: 20px; font-size: 0.68rem; color: var(--brown); font-weight: 600; }
 
+  /* TAG AUTOCOMPLETE */
+  .tag-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tag-chip { display: inline-block; padding: 3px 10px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.75rem; color: var(--muted); cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
+  .tag-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  /* WORDS FILTER BAR */
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; border: 1.5px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
+  .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+
   /* LOADING */
   #loading-screen { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: var(--bg); }
   .loading-logo { font-family: var(--font-display); font-size: 2rem; color: var(--brown); }
@@ -334,7 +346,11 @@
       </div>
       <div class="form-grid">
         <div><label>Example sentence</label><input id="inp-ex" type="text" placeholder="She was persistent in her efforts."></div>
-        <div><label>Topic / tag</label><input id="inp-tag" type="text" placeholder="work, emotions..."></div>
+        <div>
+          <label>Topic / tag</label>
+          <input id="inp-tag" type="text" placeholder="work, emotions..." oninput="updateTagSuggestions()" autocomplete="off">
+          <div class="tag-suggestions" id="tag-suggestions"></div>
+        </div>
       </div>
       <div style="margin-bottom:12px">
         <label>Definition (English)</label>
@@ -344,6 +360,14 @@
         <button class="btn btn-primary" onclick="addWord()">＋ Add word</button>
         <button class="btn btn-ghost" onclick="loadDemo()">🌿 Demo words</button>
       </div>
+    </div>
+    <div class="filter-bar" id="words-filter-bar">
+      <span class="filter-label">Filter:</span>
+      <button class="filter-chip active" onclick="setWordsFilter('all')" id="wf-all">All</button>
+      <button class="filter-chip" onclick="setWordsFilter('new')" id="wf-new">🆕 New</button>
+      <button class="filter-chip" onclick="setWordsFilter('learning')" id="wf-learning">📘 Learning</button>
+      <button class="filter-chip" onclick="setWordsFilter('known')" id="wf-known">✅ Known</button>
+      <div id="wf-tag-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
     <div id="words-list" class="words-list">
       <div class="empty-state"><div class="icon">🌿</div><p>No words yet. Add your first or load demo words!</p></div>
@@ -363,13 +387,26 @@
         </div>
       </div>
       <div class="quiz-setup">
-        <label>Filter words</label>
-        <select id="quiz-filter" style="margin-top:8px">
+        <label>Filter by level</label>
+        <select id="quiz-filter" style="margin-top:8px;margin-bottom:14px">
           <option value="all">All words</option>
           <option value="new">New only</option>
           <option value="learning">Learning</option>
           <option value="due">Due for review</option>
         </select>
+        <label>Filter by tag</label>
+        <div class="tag-suggestions" id="quiz-tag-filter" style="margin-top:6px">
+          <button class="tag-chip active" id="qtag-all" onclick="selectQuizTag('all')">All tags</button>
+        </div>
+        <div style="margin-top:14px">
+          <label>Number of words</label>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="quiz-count-btns">
+            <button class="tag-chip active" onclick="selectQuizCount(0)" id="qcount-0">All</button>
+            <button class="tag-chip" onclick="selectQuizCount(5)" id="qcount-5">5</button>
+            <button class="tag-chip" onclick="selectQuizCount(10)" id="qcount-10">10</button>
+            <button class="tag-chip" onclick="selectQuizCount(20)" id="qcount-20">20</button>
+          </div>
+        </div>
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:15px;font-size:0.95rem" onclick="startQuiz()">🚀 Start practice</button>
     </div>
@@ -377,6 +414,7 @@
       <div class="quiz-progress">
         <div class="progress-bar"><div class="progress-fill" id="qprogress"></div></div>
         <div class="progress-text" id="qprogress-text">0 / 0</div>
+        <button onclick="backToSetup()" style="background:none;border:none;color:var(--muted);font-size:0.78rem;cursor:pointer;white-space:nowrap;font-family:var(--font-body);padding:2px 6px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕ End</button>
       </div>
       <div id="quiz-content"></div>
     </div>
@@ -487,6 +525,7 @@ function listenToCloud(uid) {
     }
     renderWords();
     updateStats();
+    refreshTagFilters();
     setSyncStatus('ok', 'Synced with cloud ☁️');
   }, err => {
     setSyncStatus('error', 'Sync error — check connection');
@@ -572,10 +611,14 @@ window.deleteWord = id => {
 
 function renderWords() {
   const el=document.getElementById('words-list');
-  if (!words.length){
-    el.innerHTML=`<div class="empty-state"><div class="icon">🌿</div><p>No words yet. Add your first or load demo words!</p></div>`;return;
+  refreshTagFilters();
+  let filtered = words;
+  if (wordsFilterLevel !== 'all') filtered = filtered.filter(w => w.level === wordsFilterLevel);
+  if (wordsFilterTag   !== 'all') filtered = filtered.filter(w => w.tag === wordsFilterTag);
+  if (!filtered.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🌿</div><p>${words.length?'No words match this filter.':'No words yet. Add your first or load demo words!'}</p></div>`;return;
   }
-  el.innerHTML=words.map(w=>{
+  el.innerHTML=filtered.map(w=>{
     const cls=w.level==='known'?'level-known':w.level==='learning'?'level-learning':'level-new';
     const lbl=w.level==='known'?'✅ Know':w.level==='learning'?'📘 Learning':'🆕 New';
     const acc=w.reviews?Math.round(w.correct/w.reviews*100):0;
@@ -622,8 +665,11 @@ window.startQuiz = () => {
   if (filter==='new') pool=pool.filter(w=>w.level==='new');
   else if (filter==='learning') pool=pool.filter(w=>w.level==='learning');
   else if (filter==='due') pool=pool.filter(w=>w.nextReview<=now);
-  quizWords=pool.sort(()=>Math.random()-0.5);
-  if (!quizWords.length){showToast('😅 No words to practise');return;}
+  if (quizTag !== 'all') pool=pool.filter(w=>w.tag===quizTag);
+  pool=pool.sort(()=>Math.random()-0.5);
+  if (quizCount > 0) pool=pool.slice(0, quizCount);
+  quizWords=pool;
+  if (!quizWords.length){showToast('😅 No words match this filter');return;}
   quizIdx=0; quizScore={correct:0,wrong:0};
   document.getElementById('quiz-setup-screen').style.display='none';
   document.getElementById('quiz-result').style.display='none';
@@ -656,9 +702,15 @@ function renderQuizCard() {
     const showUaHint       = hasDef && hasUa;   // UA is hidden when def is on front
     const showSentenceHint = hasEx;              // sentence always a hint if exists
 
+    // Smart blank: match the word AND common inflections (adds s, ed, ing, er, ly etc)
+    function makeBlankRegex(word) {
+      const esc = word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      // also match stem (min 4 chars) to catch tenses like "negotiated", "hesitant"→"hesitantly"
+      const stem = esc.length > 4 ? esc.slice(0, Math.max(4, esc.length - 2)) : esc;
+      return new RegExp('\\b' + stem + '\\S*', 'gi');
+    }
     const blanked = hasEx
-      ? w.ex.replace(new RegExp('\\b' + w.en.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'gi'),
-          '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')
+      ? w.ex.replace(makeBlankRegex(w.en), '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')
       : '';
 
     const hintSection = (showUaHint || showSentenceHint) ? `
