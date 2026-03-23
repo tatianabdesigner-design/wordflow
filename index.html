@@ -641,23 +641,37 @@ function renderQuizCard() {
   cardFlipped=false;
 
   if (quizMode==='flashcard') {
-    // Build hint buttons only if data exists
-    const hasEx  = w.ex && w.ex.trim();
-    const hasUa  = w.ua && w.ua.trim();
-    const blanked = hasEx ? w.ex.replace(new RegExp(w.en, 'gi'), '<span class="blank"></span>') : '';
-    const hintBtns = (hasEx || hasUa) ? `
-      <div class="hint-buttons">
-        ${hasEx ? `<button class="hint-btn" id="hint-sentence" onclick="toggleHint('sentence')">📝 Show sentence</button>` : ''}
-        ${hasUa ? `<button class="hint-btn" id="hint-translation" onclick="toggleHint('translation')">🇺🇦 Show translation</button>` : ''}
-      </div>
-      <div id="hint-sentence-reveal" style="display:none" class="hint-reveal">📝 ${blanked}</div>
-      <div id="hint-translation-reveal" style="display:none" class="hint-reveal">🇺🇦 ${w.ua}</div>` : '';
-    // Front content: definition or UA if no definition
-    const frontMain = w.def
+    const hasDef = w.def && w.def.trim();
+    const hasUa  = w.ua  && w.ua.trim();
+    const hasEx  = w.ex  && w.ex.trim();
+
+    // Front card shows definition if available, otherwise UA translation
+    const frontMain = hasDef
       ? `<div class="fc-definition">${w.def}</div>`
       : `<div class="quiz-question" style="font-size:1.6rem">${w.ua}</div>`;
+
+    // Hint buttons: never repeat what's already shown on the front
+    // If def shown on front → UA and sentence can be hints
+    // If UA shown on front → only sentence can be a hint
+    const showUaHint       = hasDef && hasUa;   // UA is hidden when def is on front
+    const showSentenceHint = hasEx;              // sentence always a hint if exists
+
+    const blanked = hasEx
+      ? w.ex.replace(new RegExp('\\b' + w.en.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b', 'gi'),
+          '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')
+      : '';
+
+    const hintSection = (showUaHint || showSentenceHint) ? `
+      <div class="hint-buttons">
+        ${showSentenceHint ? `<button class="hint-btn" id="hint-sentence" onclick="toggleHint('sentence')">📝 Show sentence</button>` : ''}
+        ${showUaHint ? `<button class="hint-btn" id="hint-translation" onclick="toggleHint('translation')">🇺🇦 Show translation</button>` : ''}
+      </div>
+      ${showSentenceHint ? `<div id="hint-sentence-reveal" style="display:none" class="hint-reveal">📝 ${blanked}</div>` : ''}
+      ${showUaHint ? `<div id="hint-translation-reveal" style="display:none" class="hint-reveal">🇺🇦 ${w.ua}</div>` : ''}
+    ` : '';
+
     content.innerHTML=`
-      ${hintBtns}
+      ${hintSection}
       <div class="quiz-card" style="cursor:pointer;min-height:180px" onclick="flipCard()">
         <div class="flip-card" style="width:100%">
           <div class="flip-inner" id="flip-inner">
