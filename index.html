@@ -152,6 +152,22 @@
   .icon-btn:hover { color: var(--red); border-color: var(--red); background: #faeeed; }
   .icon-btn.edit:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
 
+  /* WORD PICKER */
+  .word-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-top: 10px; padding-right: 4px; }
+  .word-picker-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .word-picker-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .word-picker-item.selected { border-color: var(--accent); background: var(--accent-light); }
+  .word-picker-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+  .word-picker-en { font-weight: 600; font-size: 0.9rem; }
+  .word-picker-ua { font-size: 0.8rem; color: var(--muted); }
+  .picker-select-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .picker-count { font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono); margin-left: auto; }
+
   /* EDIT MODAL */
   .modal-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(46,31,24,0.35); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s ease; }
   .modal { background: var(--card); border: 1.5px solid var(--border); border-radius: 22px; padding: 32px; width: 100%; max-width: 480px; box-shadow: 0 12px 48px rgba(81,50,41,0.18); animation: slideUp 0.25s ease; }
@@ -408,7 +424,21 @@
           </div>
         </div>
       </div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:15px;font-size:0.95rem" onclick="startQuiz()">🚀 Start practice</button>
+      <div class="quiz-setup" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleWordPicker()">
+          <label style="cursor:pointer;color:var(--brown);font-size:0.85rem;font-weight:600;text-transform:none;letter-spacing:0">☑️ Pick words manually</label>
+          <span id="picker-toggle-icon" style="font-size:0.75rem;color:var(--muted)">▼ expand</span>
+        </div>
+        <div id="word-picker-panel" style="display:none;margin-top:12px">
+          <div class="picker-select-bar">
+            <button class="tag-chip" onclick="pickerSelectAll()">Select all</button>
+            <button class="tag-chip" onclick="pickerClearAll()">Clear</button>
+            <span class="picker-count" id="picker-count">0 selected</span>
+          </div>
+          <div class="word-picker-list" id="word-picker-list"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:15px;font-size:0.95rem;margin-top:14px" onclick="startQuiz()">🚀 Start practice</button>
     </div>
     <div id="quiz-screen" style="display:none" class="quiz-wrap">
       <div class="quiz-progress">
@@ -624,6 +654,76 @@ function save() { updateStats(); scheduleSave(); }
     if (btn) btn.classList.add('active');
   };
 
+  let pickerOpen = false;
+  let manualSelectedIds = new Set();
+
+  window.toggleWordPicker = () => {
+    pickerOpen = !pickerOpen;
+    const panel = document.getElementById('word-picker-panel');
+    const icon  = document.getElementById('picker-toggle-icon');
+    panel.style.display = pickerOpen ? 'block' : 'none';
+    icon.textContent = pickerOpen ? '▲ collapse' : '▼ expand';
+    if (pickerOpen) renderWordPicker();
+  };
+
+  function renderWordPicker() {
+    const list = document.getElementById('word-picker-list');
+    if (!list) return;
+    // apply current level+tag filter so picker matches other filters
+    const filter = document.getElementById('quiz-filter').value;
+    const now = Date.now();
+    let pool = [...words];
+    if (filter==='new') pool=pool.filter(w=>w.level==='new');
+    else if (filter==='learning') pool=pool.filter(w=>w.level==='learning');
+    else if (filter==='due') pool=pool.filter(w=>w.nextReview<=now);
+    if (quizTag !== 'all') pool=pool.filter(w=>w.tag===quizTag);
+
+    list.innerHTML = pool.map(w => {
+      const checked = manualSelectedIds.has(w.id);
+      return `<label class="word-picker-item${checked?' selected':''}" id="wpi-${w.id}">
+        <input type="checkbox" ${checked?'checked':''} onchange="togglePickerWord(${w.id}, this.checked)">
+        <div>
+          <div class="word-picker-en">${w.en}</div>
+          <div class="word-picker-ua">${w.ua}</div>
+        </div>
+        ${w.tag ? `<span class="tag" style="margin-left:auto">${w.tag}</span>` : ''}
+      </label>`;
+    }).join('');
+    updatePickerCount();
+  }
+
+  window.togglePickerWord = (id, checked) => {
+    if (checked) manualSelectedIds.add(id);
+    else manualSelectedIds.delete(id);
+    const item = document.getElementById('wpi-'+id);
+    if (item) item.classList.toggle('selected', checked);
+    updatePickerCount();
+  };
+
+  function updatePickerCount() {
+    const el = document.getElementById('picker-count');
+    if (el) el.textContent = manualSelectedIds.size + ' selected';
+  }
+
+  window.pickerSelectAll = () => {
+    document.querySelectorAll('#word-picker-list input[type=checkbox]').forEach(cb => {
+      cb.checked = true;
+      const id = parseInt(cb.closest('.word-picker-item').id.replace('wpi-',''));
+      manualSelectedIds.add(id);
+      cb.closest('.word-picker-item').classList.add('selected');
+    });
+    updatePickerCount();
+  };
+
+  window.pickerClearAll = () => {
+    manualSelectedIds.clear();
+    document.querySelectorAll('#word-picker-list input[type=checkbox]').forEach(cb => {
+      cb.checked = false;
+      cb.closest('.word-picker-item').classList.remove('selected');
+    });
+    updatePickerCount();
+  };
+
 function checkStreak() {
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now()-86400000).toDateString();
@@ -724,15 +824,21 @@ window.selectMode = m => {
 };
 
 window.startQuiz = () => {
-  const filter=document.getElementById('quiz-filter').value;
-  const now=Date.now();
-  let pool=[...words];
-  if (filter==='new') pool=pool.filter(w=>w.level==='new');
-  else if (filter==='learning') pool=pool.filter(w=>w.level==='learning');
-  else if (filter==='due') pool=pool.filter(w=>w.nextReview<=now);
-  if (quizTag !== 'all') pool=pool.filter(w=>w.tag===quizTag);
-  pool=pool.sort(()=>Math.random()-0.5);
-  if (quizCount > 0) pool=pool.slice(0, quizCount);
+  let pool;
+  // If user manually picked words — use those
+  if (manualSelectedIds.size > 0) {
+    pool = words.filter(w => manualSelectedIds.has(w.id)).sort(()=>Math.random()-0.5);
+  } else {
+    const filter=document.getElementById('quiz-filter').value;
+    const now=Date.now();
+    pool=[...words];
+    if (filter==='new') pool=pool.filter(w=>w.level==='new');
+    else if (filter==='learning') pool=pool.filter(w=>w.level==='learning');
+    else if (filter==='due') pool=pool.filter(w=>w.nextReview<=now);
+    if (quizTag !== 'all') pool=pool.filter(w=>w.tag===quizTag);
+    pool=pool.sort(()=>Math.random()-0.5);
+    if (quizCount > 0) pool=pool.slice(0, quizCount);
+  }
   quizWords=pool;
   if (!quizWords.length){showToast('😅 No words match this filter');return;}
   quizIdx=0; quizScore={correct:0,wrong:0};
